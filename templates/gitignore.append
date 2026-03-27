@@ -1,0 +1,15 @@
+# ECC
+docs/ecc-reports/
+docs/ecc-templates/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
