@@ -18,7 +18,9 @@
       "Bash(mkdir *)",
       "Bash(cat *)",
       "Bash(pwd)",
-      "Bash(which *)"
+      "Bash(which *)",
+      "Bash(find *)",
+      "Bash(grep *)"
     ],
     "ask": [
       "Edit",

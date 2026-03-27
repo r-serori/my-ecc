@@ -34,6 +34,8 @@
       "Bash(cat *)",
       "Bash(echo *)",
       "Bash(cd *)",
+      "Bash(find *)",
+      "Bash(grep *)",
       "Bash(pwd)",
       "Bash(which *)",
       "Bash(where *)",

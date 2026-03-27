@@ -24,11 +24,20 @@ Use AskUserQuestion for each:
 **Q2: Project overview** (1-2 sentences)
 「プロジェクトの概要を簡潔に記述してください（1-2文）:」
 
-**Q3: Tech stack** (languages + frameworks)
-「主要な技術スタックを入力してください（例: TypeScript, Next.js, Python, FastAPI）:」
+**Q3: Package manager / Build tool**
+「使用するパッケージマネージャー/ビルドツールを選択してください:」
 
-**Q4: Package manager**
-「使用するパッケージマネージャーを選択してください（npm / pnpm / yarn / bun / uv）:」
+Options:
+
+- npm / pnpm / yarn / bun（JavaScript / TypeScript）
+- uv / pip（Python）
+- cargo（Rust）
+- go（Go）
+- maven / gradle（Java / Kotlin）
+- composer（PHP）
+- dotnet（C#）
+- cmake（C++）
+- その他（自由入力 → ユーザーが Bash コマンド名を指定）
 
 ### Step 2: Install cc-sdd
 
@@ -47,12 +56,21 @@ Read `$TEMPLATES_DIR/settings.json` (resolve via shared spec).
 
 If `$PROJECT_CLAUDE/settings.json` does NOT exist:
   Copy template to `$PROJECT_CLAUDE/settings.json`.
-  Add package manager permissions based on Q4 answer to the `allow` list:
-    - pnpm → `"Bash(pnpm *)"`, `"Bash(npx *)"`
+  Add package manager permissions based on Q3 answer to the `allow` list:
     - npm → `"Bash(npm *)"`, `"Bash(npx *)"`
+    - pnpm → `"Bash(pnpm *)"`, `"Bash(npx *)"`
     - yarn → `"Bash(yarn *)"`
     - bun → `"Bash(bun *)"`, `"Bash(bunx *)"`
     - uv → `"Bash(uv *)"`, `"Bash(python *)"`
+    - pip → `"Bash(pip *)"`, `"Bash(python *)"`
+    - cargo → `"Bash(cargo *)"`
+    - go → `"Bash(go *)"`
+    - maven → `"Bash(mvn *)"`, `"Bash(mvnw *)"`
+    - gradle → `"Bash(gradle *)"`, `"Bash(gradlew *)"`
+    - composer → `"Bash(composer *)"`, `"Bash(php *)"`
+    - dotnet → `"Bash(dotnet *)"`
+    - cmake → `"Bash(cmake *)"`, `"Bash(make *)"`
+    - その他 → `"Bash(<user_input> *)"`
 
 If exists:
   「settings.json が既に存在します。テンプレートの安全方針をマージしますか？」
@@ -63,9 +81,10 @@ If exists:
 Read `$TEMPLATES_DIR/CLAUDE.md.template`.
 
 Replace placeholders:
-  - `{{PROJECT_NAME}}` → Q1 answer
-  - `{{PROJECT_OVERVIEW}}` → Q2 answer
-  - `{{TECH_STACK}}` → Q3 answer
+
+- `{{PROJECT_NAME}}` → Q1 answer
+- `{{PROJECT_OVERVIEW}}` → Q2 answer
+- `{{TECH_STACK}}` → `(TBD — /ecc-bootstrap で設定されます)`
 
 If `$PROJECT_ROOT/CLAUDE.md` exists:
   「CLAUDE.md が既に存在します。上書きしますか？（既存の内容は CLAUDE.md.bak にバックアップされます）」
@@ -89,7 +108,7 @@ Resolve ECC_ROOT per shared spec (priority: env var → manifest → default).
 
 If found:
   Get version: `git -C $ECC_ROOT describe --tags 2>/dev/null || git -C $ECC_ROOT rev-parse --short HEAD`
-  Display: 「✅ ECC 検出: <path> (<version>)」
+  Display: 「✅ ECC 検出: (path) (version)」
 
 If not found:
   Display setup instructions from shared spec.
@@ -100,7 +119,7 @@ If not found:
 
 Display:
 
-```
+```text
 ✅ プロジェクト初期化完了
 
   セットアップ内容:
