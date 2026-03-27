@@ -1,6 +1,6 @@
 # ECC Shared Specification
 
-Runtime reference for `/ecc-bootstrap`, `/ecc-configure`, `/ecc-evolve` commands.
+Runtime reference for `/ecc-init`, `/ecc-bootstrap`, `/ecc-configure`, `/ecc-evolve` commands.
 This file is read on-demand by each command — do not load preemptively.
 
 ---
@@ -11,11 +11,18 @@ Resolve all paths dynamically. Never hardcode absolute paths.
 
 ```text
 PROJECT_ROOT:   Current working directory
-ECC_ROOT:       $PROJECT_ROOT/../everything-claude-code/
 PROJECT_CLAUDE: $PROJECT_ROOT/.claude/
 MANIFEST_PATH:  $PROJECT_ROOT/ecc-manifest.yaml
 REPORT_DIR:     $PROJECT_ROOT/docs/ecc-reports/
+TEMPLATES_DIR:  $PROJECT_ROOT/docs/ecc-templates/
 ```
+
+### ECC_ROOT Resolution (priority order)
+
+1. **Environment variable**: If `$ECC_ROOT` is set and the directory exists, use it
+2. **Manifest**: If `$MANIFEST_PATH` exists and `ecc.source` is set, use it
+3. **Default**: `$PROJECT_ROOT/../everything-claude-code/`
+4. **Error**: If none resolve to a valid directory, display error message below
 
 ## ECC Detection
 
@@ -26,10 +33,14 @@ REPORT_DIR:     $PROJECT_ROOT/docs/ecc-reports/
 ```
 ❌ ECC（Everything Claude Code）が見つかりません。
 
-プロジェクトと同じ階層にクローンしてください:
+以下のいずれかの方法で設定してください:
 
-  cd $PROJECT_ROOT/..
-  git clone https://github.com/affaan-m/everything-claude-code.git
+  方法1: 環境変数を設定
+    export ECC_ROOT=/path/to/everything-claude-code
+
+  方法2: プロジェクトと同じ階層にクローン
+    cd $PROJECT_ROOT/..
+    git clone https://github.com/affaan-m/everything-claude-code.git
 
 期待するディレクトリ構成:
   <workspace>/
@@ -139,6 +150,7 @@ project:
 ecc:
   source: "<ECC_ROOT absolute path>"
   commit_hash: "<git rev-parse HEAD result>"
+  pinned_version: null  # Set to git tag to lock. /ecc-evolve warns before updating past this.
   last_sync: "<ISO 8601 timestamp>"
 
 tiers:
@@ -186,3 +198,5 @@ scans: []
 - **Preserve rule subdirectory structure**: Copy `common/`, `typescript/`, `python/` as-is. Flattening causes filename collisions (e.g., `security.md`, `coding-style.md`).
 - **Confirm before overwriting**: Always ask user before overwriting existing files, especially `.claude/settings.json`.
 - **Read-only on ECC**: Never modify files inside the ECC repository. Only modify copies at the destination.
+- **Version pinning**: If `ecc.pinned_version` is set in the manifest, `/ecc-evolve` warns before applying updates past the pinned commit.
+- **Template path**: `/ecc-init` reads templates from `$TEMPLATES_DIR` (installed by `install.sh`).
