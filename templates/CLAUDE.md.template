@@ -6,13 +6,19 @@
 
 **Tech Stack:** {{TECH_STACK}}
 
+## Language
+
+- **Code identifiers** (variables, functions, classes): English
+- **Code comments**: Japanese
+- **Commit messages / PR descriptions**: Japanese
+- **User-facing text (UI, docs)**: Japanese
+- **Log output**: English (for searchability)
+- **Think and reason**: English
+- **Respond to the user**: Japanese
+
 ## Critical Rules
 
 > 共通ルール (style, security, testing, workflow): `.claude/rules/` (managed by ECC)
-
-### Project-Specific
-
-<!-- このプロジェクト固有の制約のみここに記述 -->
 
 ## Architecture & Requirements
 

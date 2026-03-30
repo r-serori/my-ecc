@@ -39,16 +39,40 @@ Options:
 - cmake（C++）
 - その他（自由入力 → ユーザーが Bash コマンド名を指定）
 
+**Q4: Response language**
+「Claude の応答言語を選択してください:」
+
+Options:
+
+- ja (日本語)
+- en（英語）
+- その他（自由入力）
+
+Q4 is used for:
+- Step 2: `--lang` parameter for cc-sdd
+- Step 4: `{{LANGUAGE}}` placeholder replacement
+
 ### Step 2: Install cc-sdd
 
 Check if `.kiro/` directory exists.
 
 If exists:
   「cc-sdd は既にインストール済みのようです（.kiro/ が存在）。再インストールしますか？」
-  If no: skip
+  If no: skip to Step 3.
 
 If not exists or user confirms:
-  Run: `npx cc-sdd@latest --claude-agent --lang ja`
+
+  **Pre-install guard:**
+  If `$PROJECT_ROOT/CLAUDE.md` exists:
+    Copy to `$PROJECT_ROOT/CLAUDE.md.pre-ccsdd-bak`.
+    「既存の CLAUDE.md をバックアップしました → CLAUDE.md.pre-ccsdd-bak」
+
+  Run: `npx cc-sdd@latest --claude-agent --lang <Q4 answer>`
+
+  **Post-install cleanup:**
+  If `$PROJECT_ROOT/CLAUDE.md` exists:
+    Delete `$PROJECT_ROOT/CLAUDE.md`.
+    「cc-sdd が生成した CLAUDE.md を削除しました（ECC テンプレート版を Step 4 で生成します）」
 
 ### Step 3: Settings Template
 
@@ -85,12 +109,18 @@ Replace placeholders:
 - `{{PROJECT_NAME}}` → Q1 answer
 - `{{PROJECT_OVERVIEW}}` → Q2 answer
 - `{{TECH_STACK}}` → `(TBD — /ecc-bootstrap で設定されます)`
+- `{{LANGUAGE}}` → Q4 answer (言語名: "Japanese", "English", etc.)
 
-If `$PROJECT_ROOT/CLAUDE.md` exists:
-  「CLAUDE.md が既に存在します。上書きしますか？（既存の内容は CLAUDE.md.bak にバックアップされます）」
-  If yes: copy existing to `CLAUDE.md.bak`, then write new.
+If `$PROJECT_ROOT/CLAUDE.md` exists AND `$PROJECT_ROOT/CLAUDE.md.pre-ccsdd-bak` does NOT exist:
+  Copy to `$PROJECT_ROOT/CLAUDE.md.bak`.
+  「既存の CLAUDE.md を CLAUDE.md.bak にバックアップしました。」
 
 Write generated content to `$PROJECT_ROOT/CLAUDE.md`.
+
+If `$PROJECT_ROOT/CLAUDE.md.pre-ccsdd-bak` exists:
+  「ℹ️ cc-sdd 実行前の CLAUDE.md バックアップがあります（CLAUDE.md.pre-ccsdd-bak）。」
+  「必要に応じて、プロジェクト固有の設定を新しい CLAUDE.md に手動でマージしてください。」
+
 Verify line count < 200. If exceeds, warn user.
 
 ### Step 5: Update .gitignore
