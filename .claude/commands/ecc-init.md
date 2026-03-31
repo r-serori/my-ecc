@@ -24,22 +24,7 @@ Use AskUserQuestion for each:
 **Q2: Project overview** (1-2 sentences)
 「プロジェクトの概要を簡潔に記述してください（1-2文）:」
 
-**Q3: Package manager / Build tool**
-「使用するパッケージマネージャー/ビルドツールを選択してください:」
-
-Options:
-
-- npm / pnpm / yarn / bun（JavaScript / TypeScript）
-- uv / pip（Python）
-- cargo（Rust）
-- go（Go）
-- maven / gradle（Java / Kotlin）
-- composer（PHP）
-- dotnet（C#）
-- cmake（C++）
-- その他（自由入力 → ユーザーが Bash コマンド名を指定）
-
-**Q4: Response language**
+**Q3: Response language**
 「Claude の応答言語を選択してください:」
 
 Options:
@@ -48,7 +33,7 @@ Options:
 - en（英語）
 - その他（自由入力）
 
-Q4 is used for:
+Q3 is used for:
 - Step 2: `--lang` parameter for cc-sdd
 - Step 4: `{{LANGUAGE}}` placeholder replacement
 
@@ -67,7 +52,7 @@ If not exists or user confirms:
     Copy to `$PROJECT_ROOT/CLAUDE.md.pre-ccsdd-bak`.
     「既存の CLAUDE.md をバックアップしました → CLAUDE.md.pre-ccsdd-bak」
 
-  Run: `npx cc-sdd@latest --claude-agent --lang <Q4 answer>`
+  Run: `npx cc-sdd@latest --claude-agent --lang <Q3 answer>`
 
   **Post-install cleanup:**
   If `$PROJECT_ROOT/CLAUDE.md` exists:
@@ -80,25 +65,13 @@ Read `$TEMPLATES_DIR/settings.json` (resolve via shared spec).
 
 If `$PROJECT_CLAUDE/settings.json` does NOT exist:
   Copy template to `$PROJECT_CLAUDE/settings.json`.
-  Add package manager permissions based on Q3 answer to the `allow` list:
-    - npm → `"Bash(npm *)"`, `"Bash(npx *)"`
-    - pnpm → `"Bash(pnpm *)"`, `"Bash(npx *)"`
-    - yarn → `"Bash(yarn *)"`
-    - bun → `"Bash(bun *)"`, `"Bash(bunx *)"`
-    - uv → `"Bash(uv *)"`, `"Bash(python *)"`
-    - pip → `"Bash(pip *)"`, `"Bash(python *)"`
-    - cargo → `"Bash(cargo *)"`
-    - go → `"Bash(go *)"`
-    - maven → `"Bash(mvn *)"`, `"Bash(mvnw *)"`
-    - gradle → `"Bash(gradle *)"`, `"Bash(gradlew *)"`
-    - composer → `"Bash(composer *)"`, `"Bash(php *)"`
-    - dotnet → `"Bash(dotnet *)"`
-    - cmake → `"Bash(cmake *)"`, `"Bash(make *)"`
-    - その他 → `"Bash(<user_input> *)"`
+  「✅ settings.json を作成しました（安全方針テンプレート）」
 
 If exists:
   「settings.json が既に存在します。テンプレートの安全方針をマージしますか？」
   If yes: merge deny list (union), preserve existing allow/ask entries.
+
+> **Note:** パッケージマネージャーの権限（`allow` リスト）は `/ecc-configure` が技術スタック確定後に自動追加します。
 
 ### Step 4: Generate CLAUDE.md
 
@@ -108,8 +81,7 @@ Replace placeholders:
 
 - `{{PROJECT_NAME}}` → Q1 answer
 - `{{PROJECT_OVERVIEW}}` → Q2 answer
-- `{{TECH_STACK}}` → `(TBD — /ecc-configure で自動設定されます)`
-- `{{LANGUAGE}}` → Q4 answer (言語名: "Japanese", "English", etc.)
+- `{{LANGUAGE}}` → Q3 answer (言語名: "Japanese", "English", etc.)
 
 If `$PROJECT_ROOT/CLAUDE.md` exists AND `$PROJECT_ROOT/CLAUDE.md.pre-ccsdd-bak` does NOT exist:
   Copy to `$PROJECT_ROOT/CLAUDE.md.bak`.

@@ -49,21 +49,15 @@
 | Command | Description |
 |---------|-------------|
 | `/ecc-bootstrap` | 上流工程支援（安全方針 + 設計知識）のインストール |
-| `/ecc-configure` | Tech Stack 自動抽出 + 実装コンポーネントのインストール |
+| `/ecc-configure` | Tech Stack Gap 検出 + tech.md 生成（必要時）+ 実装コンポーネントのインストール |
 | `/ecc-evolve` | 継続改善 + ECC 更新差分の適用 |
 
 ## Workflow
 
 ```
-/ecc-bootstrap → /kiro:steering → spec-requirements
-→ /ecc-configure → spec-design → spec-tasks → spec-impl → /tdd → /ecc-evolve
+/ecc-bootstrap → /kiro:steering → spec-init → spec-requirements
+→ /ecc-configure → spec-design → /kiro:steering(sync) → spec-tasks → spec-impl → /tdd → /ecc-evolve
 ```
-
-## Git Workflow
-
-- Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`
-- Feature branches from `main`
-- PRs required for merge
 
 ## Installed Components
 

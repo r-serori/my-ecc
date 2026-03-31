@@ -19,9 +19,9 @@ All user-facing output (messages, tables, prompts, reports) MUST be in Japanese.
 1. Read `$MANIFEST_PATH`. If bootstrap not completed (`phases.upstream.installed_at` is null), stop:
    「先に `/ecc-bootstrap` を実行してください。」
 
-2. Check for cc-sdd steering artifacts. If `.kiro/steering/tech.md` does not exist, warn but do not block:
+2. Check for cc-sdd steering artifacts. If `.kiro/steering/` directory does not exist at all, warn but do not block:
    「cc-sdd の steering フェーズ（`/kiro:steering`）がまだ完了していないようです。」
-   「技術スタックの自動抽出ができない場合、手動入力が必要になります。続行しますか？」
+   「tech.md が存在しない場合、Gap Fill 質問で技術スタックを入力できます。続行しますか？」
 
 ### Step 2: Tech Stack Auto-Extraction
 
@@ -29,47 +29,129 @@ Extract tech stack with the following priority:
 
 **Priority 1: `.kiro/steering/tech.md`**
 
-If this file exists, parse it for:
+If this file exists, first perform **Sparse Detection**:
+
+**Sparse Detection criteria** — tech.md is considered sparse/placeholder if ANY of:
+- Core Technologies section contains placeholder text (lines matching `[e.g.,` or `[e.g.` or `例:`)
+- Language line has no actual value (e.g., `- **Language**: [e.g., TypeScript, Python]` or `- **Language**:` with nothing after the colon)
+- Framework line has no actual value
+- Runtime line has no actual value
+- Architecture section contains only `[High-level system design approach]` or is empty
+
+If tech.md is **fully populated** (passes all sparse checks):
+
+Parse it for:
 
 - **Languages**: Search for "Language" / "言語" headings or list items. Extract technology names (e.g., TypeScript, Python).
 - **Frameworks**: Search for "Framework" / "フレームワーク" headings or list items. Also extract from "Key Libraries" section. Extract technology names (e.g., Next.js, NestJS, LangGraph).
 - **Tools**: Search for "Required Tools" / "ツール" / "Development Environment" headings. Extract tool names (e.g., Docker, Playwright, AWS).
 
 Set `tech_stack_source: "steering"` in manifest.
+→ Continue to **After extraction** below.
+
+If tech.md is **sparse/placeholder**:
+
+「`.kiro/steering/tech.md` が検出されましたが、技術スタックがまだ記入されていないようです。」
+「Gap Fill 質問で技術スタックを入力します。」
+→ Trigger **Gap Fill** below.
+
+If tech.md **does not exist**:
+→ Trigger **Gap Fill** below.
 
 **Priority 2: `$PROJECT_ROOT/CLAUDE.md` の Tech Stack 行**
 
-If Priority 1 not available, search CLAUDE.md for a line matching `**Tech Stack:**` or `## Tech Stack`.
+If Priority 1 was fully populated → skip this step (already extracted).
+
+If Priority 1 triggered Gap Fill → skip this step (Gap Fill handles it).
+
+Otherwise (tech.md does not exist and Gap Fill was not yet triggered), search CLAUDE.md for a line matching `**Tech Stack:**` or `## Tech Stack`.
 Parse the value by splitting on commas (`,`) and pipes (`|`).
 Classify each item by matching against Language-Specific, Framework-Specific, and Tool-Specific keywords from shared spec.
 
-Set `tech_stack_source: "claude_md"` in manifest.
+If result contains actual technology names (not just "(TBD" placeholder):
+  Set `tech_stack_source: "claude_md"` in manifest.
+  → Continue to **After extraction** below.
 
-**Priority 3: Manual fallback（Q1-Q3）**
+If CLAUDE.md has no usable tech stack:
+  → Trigger **Gap Fill** below.
 
-If neither Priority 1 nor 2 yields results:
+**Priority 3: Gap Fill（構造化質問 → tech.md 生成）**
 
-「技術スタックの自動検出に失敗しました。手動で入力してください。」
+Display:
 
-Scan ECC to dynamically build available options:
+「技術スタックを教えてください。未定の項目は「未定」と記載してください。」
 
-- `$ECC_ROOT/rules/` subdirectory names → available **languages** list
-  - Example: `common/`, `typescript/`, `python/` → TypeScript, Python
-- `$ECC_ROOT/skills/*/SKILL.md` descriptions → available **frameworks/libraries** list
-  - Extract framework names from descriptions (Next.js, Django, Flask, Docker, etc.)
+Present the following structured prompt using AskUserQuestion:
 
-Use AskUserQuestion for each:
+```
+- Architecture: (例: Monorepo / Frontend only / Fullstack)
+- Language: (例: TypeScript, Python)
+- Framework: (例: Next.js 15, Hono, FastAPI)
+- Runtime: (例: Node.js 22+, Python 3.12+)
+- Key Libraries: (例: TanStack Query, LangGraph, Prisma)
+- Infrastructure: (例: AWS, Vercel, Cloudflare)
+- DevOps/Monitoring: (例: GitHub Actions, Datadog)
+- Testing: (例: Vitest, Playwright, pytest)
 
-**Q1: Languages** (multi-select from scan results)
-「使用する言語を選択してください（カンマ区切りで入力）:」followed by the discovered language list.
+備考欄（任意）:
+(例: 最新安定バージョン希望、既存のXXXと統合予定、など)
+```
 
-**Q2: Frameworks/Libraries** (multi-select, filtered by Q1 + language-agnostic options)
-「使用するフレームワーク/ライブラリを選択してください（カンマ区切りで入力）:」followed by relevant options based on Q1 answers.
+After receiving user input, generate tech.md content in **cc-sdd template format**:
 
-**Q3: Tools/Infrastructure** (multi-select, filtered by project type)
-「使用するツール/インフラを選択してください（カンマ区切りで入力）:」followed by relevant options (docker, postgres, playwright, supabase, etc.) with project type recommendations highlighted.
+```markdown
+# Technology Stack
 
-Set `tech_stack_source: "manual"` in manifest.
+## Architecture
+[from Architecture input — or "[To be determined during spec-design]" if 未定]
+
+## Core Technologies
+- **Language**: [from Language input]
+- **Framework**: [from Framework input]
+- **Runtime**: [from Runtime input]
+
+## Key Libraries
+[from Key Libraries input — or "[To be determined during spec-design]" if 未定]
+
+## Development Standards
+### Type Safety
+[inferred from language choice — e.g., "TypeScript strict mode, no `any`" for TypeScript; "Type hints required (mypy strict)" for Python; "[To be determined]" for others]
+### Code Quality
+[inferred from framework/language — e.g., "ESLint, Prettier" for JS/TS ecosystem; "Ruff, Black" for Python; "[To be determined]" for others]
+### Testing
+[from Testing input — or "[To be determined during spec-design]" if 未定]
+
+## Development Environment
+### Required Tools
+[from Infrastructure + DevOps/Monitoring input]
+### Common Commands
+```bash
+# Dev: [inferred from framework — e.g., `npm run dev` for Next.js, `uv run fastapi dev` for FastAPI]
+# Build: [inferred from framework]
+# Test: [inferred from Testing input]
+```
+
+## Key Technical Decisions
+[from 備考欄 input — or "[To be determined during spec-design]" if empty]
+```
+
+Display generated content and ask for confirmation:
+
+「以下の内容で `.kiro/steering/tech.md` を生成します。修正がある場合は指摘してください（Enter で確定）:」
+
+[Display generated tech.md content]
+
+If user provides modifications, apply them to the generated content.
+
+Write confirmed content to `.kiro/steering/tech.md` (create `.kiro/steering/` directory with `mkdir -p` if needed).
+
+「✅ `.kiro/steering/tech.md` を生成しました。」
+
+Now re-parse the generated tech.md using the same Priority 1 extraction logic (Languages, Frameworks, Tools).
+
+Items marked as 「未定」or placeholders like `[To be determined during spec-design]` should be treated as empty values and stored as empty arrays for that category.
+
+Set `tech_stack_source: "gap_fill"` in manifest.
 
 **After extraction (all priorities):**
 
@@ -87,6 +169,46 @@ Set `tech_stack_source: "manual"` in manifest.
 「Tech Stack は正しいですか？ 修正がある場合は入力してください（Enter で確定）:」
 
 If user provides modifications, update the tech_stack accordingly.
+
+**Update settings.json — パッケージマネージャー権限の自動追加:**
+
+Infer package manager from confirmed `tech_stack.languages` and `tech_stack.frameworks`, then add permissions to `$PROJECT_CLAUDE/settings.json` `allow` list:
+
+| Language / Framework | Package Manager | Permissions |
+| --- | --- | --- |
+| TypeScript, JavaScript | (ask user) npm / pnpm / yarn / bun | See mapping below |
+| Python | (ask user) uv / pip | See mapping below |
+| Rust | cargo | `"Bash(cargo *)"` |
+| Go | go | `"Bash(go *)"` |
+| Java, Kotlin | (ask user) maven / gradle | See mapping below |
+| PHP | composer | `"Bash(composer *)"`, `"Bash(php *)"` |
+| C#, .NET | dotnet | `"Bash(dotnet *)"` |
+| C, C++ | cmake | `"Bash(cmake *)"`, `"Bash(make *)"` |
+
+Permission mapping:
+- npm → `"Bash(npm *)"`, `"Bash(npx *)"`
+- pnpm → `"Bash(pnpm *)"`, `"Bash(npx *)"`
+- yarn → `"Bash(yarn *)"`
+- bun → `"Bash(bun *)"`, `"Bash(bunx *)"`
+- uv → `"Bash(uv *)"`, `"Bash(python *)"`
+- pip → `"Bash(pip *)"`, `"Bash(python *)"`
+- cargo → `"Bash(cargo *)"`
+- go → `"Bash(go *)"`
+- maven → `"Bash(mvn *)"`, `"Bash(mvnw *)"`
+- gradle → `"Bash(gradle *)"`, `"Bash(gradlew *)"`
+- composer → `"Bash(composer *)"`, `"Bash(php *)"`
+- dotnet → `"Bash(dotnet *)"`
+- cmake → `"Bash(cmake *)"`, `"Bash(make *)"`
+
+If the language has multiple package manager options (e.g., TypeScript → npm/pnpm/yarn/bun), ask user:
+
+「パッケージマネージャーを選択してください（{language}）:」with options listed.
+
+If package manager can be uniquely inferred (e.g., Rust → cargo), add without asking.
+
+Add only permissions not already present in the `allow` list. Display added permissions:
+
+「✅ settings.json にパッケージマネージャー権限を追加しました: {permissions}」
 
 ### Step 3: Run Scan Engine (Configure Mode)
 
@@ -161,15 +283,21 @@ Report includes:
 ```markdown
 ## Next Steps
 
-1. **cc-sdd: 設計・実装フェーズを開始**
-   - `/kiro:spec-design <feature>` — アーキテクチャ設計
+1. **cc-sdd: 設計フェーズを開始**
+   - `/kiro:spec-design <feature>` — アーキテクチャ設計（Discovery で技術調査・提案）
+
+2. **steering 同期（設計結果の反映）**
+   - `/kiro:steering` — spec-design の技術決定を tech.md に反映（sync モード）
+   - 技術スタックに大きな変更があった場合は `/ecc-configure` を再実行
+
+3. **cc-sdd: タスク分解・実装**
    - `/kiro:spec-tasks <feature>` — タスク分解
    - `/kiro:spec-impl <feature> <task-ids>` — 実装
 
-2. **TDD ワークフロー**
+4. **TDD ワークフロー**
    - `/tdd` — テスト駆動開発
    - `/code-review` — コードレビュー
 
-3. **継続改善**
+5. **継続改善**
    - `/ecc-evolve` — ECC 更新同期 + 継続改善コンポーネント
 ```
