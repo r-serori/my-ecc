@@ -48,15 +48,15 @@
 
 | Command | Description |
 |---------|-------------|
-| `/ecc-bootstrap` | 安全方針 + 設計知識のインストール |
-| `/ecc-configure` | 実装コンポーネントのインストール |
+| `/ecc-bootstrap` | 上流工程支援（安全方針 + 設計知識）のインストール |
+| `/ecc-configure` | Tech Stack 自動抽出 + 実装コンポーネントのインストール |
 | `/ecc-evolve` | 継続改善 + ECC 更新差分の適用 |
 
 ## Workflow
 
 ```
-/ecc-bootstrap → /kiro:steering → spec-init → spec-requirements
-→ spec-design → spec-tasks → /ecc-configure → /tdd → /ecc-evolve
+/ecc-bootstrap → /kiro:steering → spec-requirements
+→ /ecc-configure → spec-design → spec-tasks → spec-impl → /tdd → /ecc-evolve
 ```
 
 ## Git Workflow

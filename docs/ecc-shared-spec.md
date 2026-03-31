@@ -67,29 +67,35 @@ TEMPLATES_DIR:  $PROJECT_ROOT/docs/ecc-templates/
 
 MCP scan: Parse the single JSON file. Each key under `mcpServers` is treated as one component. The `env` field indicates API key requirements.
 
-### Classification Criteria
+---
 
-Classify each component by matching its `description` and body content against knowledge domain keywords. **Use domain-based criteria, not hardcoded component name lists.**
+## Classification Criteria
 
-#### Tier 0: Safety
+Each command operates in a specific **scan mode** that determines how components are classified and scored.
 
-Keywords: destructive operation prevention, permission guard, safety policy, settings.json safety
+### Mode: Bootstrap（上流工程支援）
 
-#### Tier 1: Design Knowledge (needed before cc-sdd)
+コンポーネントの `description` と body content を **upstream_domains** キーワードに照合する。
+**言語/FW 固有キーワードでの除外（-100）は適用しない。**
 
-- **Architecture**: architecture, system design, modularity, scalability, layering, dependencies
-- **API Design**: API design, REST, resource naming, response format, pagination, versioning, status codes
-- **Data Design**: schema design, database patterns, indexing, normalization, migration safety
-- **Security Design**: security design, authentication architecture, OWASP, secrets management, authorization
-- **Performance Design**: caching strategies, N+1 prevention, scaling patterns, performance optimization
-- **Decision Records**: ADR, architecture decision record, tradeoff analysis
-- **Frontend Design**: component composition, state management patterns, design system, design tokens
-- **Backend Design**: service layer, repository pattern, middleware patterns, dependency injection
-- **Requirements**: requirements validation, MVP definition, product thinking, anti-goals
-- **Workflow Foundation**: research-first, plan-first, git workflow, coding style (immutability)
-- **Common Rules**: `rules/common/` directory — always Tier 1 regardless of content
+理由: bootstrap は cc-sdd 要件定義の前に実行されるため、技術スタックはまだ確定していない。
+上流工程（要件定義・設計方針策定）の品質を向上させるコンポーネントのみを対象とする。
 
-#### Tier 2: Implementation (after cc-sdd design finalized)
+#### upstream_domains
+
+| Domain | always_install | Keywords | 上流で必要な理由 |
+|--------|---------------|----------|----------------|
+| safety | true | destructive operation prevention, permission guard, safety policy, settings.json safety | 全工程で破壊的操作を防止する基盤 |
+| design_methodology | false | architecture, system design, ADR, decision record, product thinking, requirements, MVP, blueprint, modularity, scalability, layering, API design, REST, resource naming, schema design, database patterns, indexing, frontend design, component composition, state management, design system, backend design, service layer, repository pattern, dependency injection, caching strategies, N+1 prevention, performance optimization | 要件定義・アーキテクチャ設計の判断基準を提供 |
+| quality_methodology | false | TDD, test-driven, test strategy, verification, code review, quality gate, coding standards | 設計段階で品質方針を決定する必要がある |
+| engineering_paradigm | false | agentic engineering, eval-first, agent architecture, multi-agent, cost-aware, decomposition, harness, agent eval | エージェント活用等のパラダイムはアーキテクチャ判断に直接影響 |
+| security_design | false | security design, OWASP, authentication architecture, secrets management, authorization | セキュリティ設計方針は要件定義段階で決定が必要 |
+| workflow_foundation | false | git workflow, research-first, plan-first, coding style, immutability, continuous learning | 開発ワークフローの基盤は最初に確立する |
+| common_rules | true | (`rules/common/` directory — always upstream regardless of content) | 共通ルールは全工程に適用される |
+
+### Mode: Configure（実装支援）
+
+cc-sdd steering 完了後に実行。確定した tech_stack に基づいてコンポーネントを選定する。
 
 - **Language-specific**: language-specific coding style, type checking, linting, formatting
 - **Testing**: TDD, E2E testing, test coverage, pytest, Playwright, unit testing
@@ -98,9 +104,11 @@ Keywords: destructive operation prevention, permission guard, safety policy, set
 - **Framework Patterns**: framework-specific implementation patterns (Next.js, NestJS, Django, etc.)
 - **Language Idioms**: Pythonic idioms, TypeScript patterns, language-specific best practices
 - **Dev Tools**: MCP server patterns, documentation lookup
-- **MCP Integration**: MCP servers, external tool integration (default tier for MCP components)
+- **MCP Integration**: MCP servers, external tool integration (default mode for MCP components)
 
-#### Tier 3: Continuous (during development)
+### Mode: Evolve（継続改善）
+
+開発中に随時実行。継続的改善コンポーネントを対象とする。
 
 - **Pattern Extraction**: learn, pattern extraction, session analysis
 - **Continuous Learning**: continuous learning, instinct, confidence scoring, skill evolution
@@ -110,15 +118,17 @@ Keywords: destructive operation prevention, permission guard, safety policy, set
 
 ### Classification Rules
 
-1. Components spanning multiple tiers → classify to the **earliest** (lowest number) tier
-2. `rules/common/` → **always Tier 1**
-3. Components excluded by scoring are still included in classification results for report completeness
+1. Components matching multiple modes → classify to the **earliest** mode (bootstrap > configure > evolve)
+2. `rules/common/` → **always upstream** (bootstrap mode)
+3. `rules/<language>/` → **always downstream** (configure mode), language match rules apply
+4. Components excluded by scoring are still included in classification results for report completeness
 
 ---
 
 ## Component Classification Keywords
 
 Used by the Scoring Algorithm to determine component relevance to the user's project.
+These keywords are used **only in configure mode** — bootstrap mode uses upstream_domains instead.
 
 ### Language-Specific Keywords
 
@@ -149,6 +159,8 @@ nestjs: [nestjs, nest.js]
 flutter: [flutter, dart]
 react: [react, jsx, hooks]
 vue: [vue, nuxt, vuex]
+langgraph: [langgraph, lang graph, state graph, agent graph]
+langchain: [langchain, lang chain, retrieval chain]
 ```
 
 ### Tool-Specific Keywords
@@ -159,6 +171,8 @@ postgres: [postgres, postgresql, sql database]
 playwright: [playwright, browser testing]
 supabase: [supabase]
 cloudflare: [cloudflare, workers, wrangler]
+firecrawl: [firecrawl, web scraping, crawl]
+langsmith: [langsmith, tracing, llm observability]
 ```
 
 ### Domain-Specific Keywords
@@ -173,9 +187,34 @@ media: [video, image, fal-ai, media generation, audio]
 
 ## Scoring Algorithm
 
-For each component, calculate a relevance score by matching its `description` (and `short_description` from openai.yaml if available) against the Classification Keywords above.
+### Bootstrap Mode Scoring
 
-### Scoring Rules
+For each component, match its `description` (and body content) against upstream_domains keywords.
+
+#### Scoring Rules (bootstrap)
+
+1. `always_install` domain match (safety, common_rules) → **+20** (auto-include)
+2. upstream_domain keyword match → **+10**
+3. Multiple domain matches → **additive** (e.g., design_methodology +10 AND quality_methodology +10 = +20)
+4. Project Type Bonus (see table below) → **+3**
+5. No match to any upstream_domain → **+0** (not displayed)
+6. **Language/FW -100 exclusion is NOT applied** in bootstrap mode
+
+#### Display Thresholds (bootstrap)
+
+| Score | Label | 意味 |
+| --- | --- | --- |
+| 20+ | 🔒 自動 | Safety / Common Rules（自動インストール） |
+| 8+ | ⭐⭐⭐ 強く推薦 | 複数ドメインマッチ or ドメイン + Project Type |
+| 3+ | ⭐⭐ 推薦 | Project Type ボーナス付き |
+| 1+ | ⭐ 任意 | 単一ドメインマッチ（部分的） |
+| 0 | — | 非表示（上流工程に無関係） |
+
+### Configure Mode Scoring
+
+For each component, calculate a relevance score by matching its `description` (and `short_description` from openai.yaml if available) against the Component Classification Keywords above.
+
+#### Scoring Rules (configure)
 
 Evaluate top to bottom. First match wins per keyword group:
 
@@ -188,11 +227,22 @@ Evaluate top to bottom. First match wins per keyword group:
 7. Domain match (domain_specific keywords) → **0** (confirm with user)
 8. NO match to any keyword list → **+5** (UNIVERSAL)
 
-### Special Rules
+#### Special Rules (configure)
 
-- `rules/common/` → always UNIVERSAL (+5), always Tier 1
+- `rules/common/` → skip (already installed during bootstrap)
 - `rules/<language>/` → language match rules apply (rule 1 or 2)
 - Multiple keyword group matches → scores are additive (e.g., language +10 AND tool +2 = +12)
+- Components already in manifest `installed[]` → show as ALREADY INSTALLED, skip scoring
+
+#### Display Thresholds (configure)
+
+| Score | Label | 意味 |
+| --- | --- | --- |
+| 8+ | ⭐⭐⭐ 強く推薦 | Tech Stack 直接一致 |
+| 3+ | ⭐⭐ 推薦 | 汎用 or Project Type 一致 |
+| 1+ | ⭐ 任意 | ツール特化（あると便利） |
+| 0 | 📦 確認必要 | ドメイン特化（要ユーザー確認） |
+| <0 | ❌ 除外 | 言語/FW 不一致（非表示） |
 
 ### Project Type
 
@@ -210,7 +260,7 @@ Set during bootstrap (Step 3b Q0). Stored in manifest `project.type`.
 
 ### Project Type Bonus
 
-When a component matches a tool_specific keyword AND the tool appears in the bonus list for the user's project type, apply **+3 bonus** on top of the base score.
+When a component matches a tool_specific keyword AND the tool appears in the bonus list for the user's project type, apply **+3 bonus** on top of the base score. In bootstrap mode, apply the bonus when a component's upstream_domain matches a domain relevant to the project type.
 
 | Project Type | Bonus Targets |
 | --- | --- |
@@ -222,16 +272,6 @@ When a component matches a tool_specific keyword AND the tool appears in the bon
 | data | postgres, cost-aware-llm-pipeline |
 
 Note: fullstack covers the full lifecycle (requirements → deployment → operations), so bonus targets are broadly set.
-
-### Display Thresholds
-
-| Score | Label | 意味 |
-| --- | --- | --- |
-| 8+ | ⭐⭐⭐ 強く推薦 | Tech Stack 直接一致 |
-| 3+ | ⭐⭐ 推薦 | 汎用 or Project Type 一致 |
-| 1+ | ⭐ 任意 | ツール特化（あると便利） |
-| 0 | 📦 確認必要 | ドメイン特化（要ユーザー確認） |
-| <0 | ❌ 除外 | 言語/FW 不一致（非表示） |
 
 ---
 
@@ -259,6 +299,8 @@ Group by score threshold, sorted by score descending within each group:
 - ⭐ 任意 → same table format
 - 📦 ドメイン特化（確認が必要）→ same table format
 ```
+
+In bootstrap mode, add a `Domain` column to show which upstream_domain matched.
 
 ### User Selection Syntax
 
@@ -314,9 +356,10 @@ project:
   type: "<project type>"          # frontend | backend | fullstack | library | infrastructure | data
   root: "<PROJECT_ROOT absolute path>"
   tech_stack:
-    languages: []       # Set during bootstrap (user selection)
-    frameworks: []      # Set during bootstrap (user selection)
-    tools: []           # Set during bootstrap (docker, postgres, etc.)
+    languages: []       # Set during configure (auto-extracted or manual)
+    frameworks: []      # Set during configure (auto-extracted or manual)
+    tools: []           # Set during configure (docker, postgres, etc.)
+  tech_stack_source: null  # "steering" | "claude_md" | "manual" — set during configure
 
 ecc:
   source: "<ECC_ROOT absolute path>"
@@ -324,16 +367,14 @@ ecc:
   pinned_version: null  # Set to git tag to lock. /ecc-evolve warns before updating past this.
   last_sync: "<ISO 8601 timestamp>"
 
-tiers:
-  tier0:
-    installed_at: null  # Set when bootstrap completes
+phases:
+  upstream:
+    installed_at: null    # Set when bootstrap completes
     settings_modified: false
-  tier1:
-    installed_at: null
-  tier2:
-    installed_at: null
-  tier3:
-    installed_at: null
+  downstream:
+    installed_at: null    # Set when configure completes
+  continuous:
+    installed_at: null    # Set when evolve first runs
 
 installed: []
 # Each entry:
@@ -341,7 +382,7 @@ installed: []
 #     name: "<component name>"
 #     source: "<relative path from ECC_ROOT>"
 #     destination: "<relative path from PROJECT_ROOT>"
-#     tier: 0 | 1 | 2 | 3
+#     phase: "upstream" | "downstream" | "continuous"
 #     domain: "<knowledge domain>"
 #     score: <number>
 #     reason: "<selection reason>"
@@ -357,6 +398,7 @@ scans: []
 # Each entry:
 #   - date: "<ISO 8601>"
 #     subcommand: "bootstrap" | "configure" | "evolve"
+#     scan_mode: "bootstrap" | "configure" | "evolve"
 #     total_scanned: <number>
 #     installed_count: <number>
 #     report_path: "<report file path>"

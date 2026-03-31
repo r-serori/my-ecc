@@ -1,8 +1,8 @@
 ---
-description: "Install Tier 3 (continuous improvement) components and apply ECC updates."
+description: "Install continuous improvement components and apply ECC updates."
 ---
 
-# ECC Evolve — Tier 3 + Update Sync
+# ECC Evolve — Continuous Improvement + Update Sync
 
 ## Prerequisites
 
@@ -16,13 +16,13 @@ All user-facing output (messages, tables, prompts, reports) MUST be in Japanese.
 
 ### Step 1: Precondition Check
 
-Read `$MANIFEST_PATH`. Confirm bootstrap and configure are completed (`tiers.tier1.installed_at` and `tiers.tier2.installed_at` are set). If not, stop with appropriate message directing user to run the missing command first.
+Read `$MANIFEST_PATH`. Confirm bootstrap and configure are completed (`phases.upstream.installed_at` and `phases.downstream.installed_at` are set). If not, stop with appropriate message directing user to run the missing command first.
 
-### Step 2: Tier 3 Component Install (Phase-based)
+### Step 2: Continuous Improvement Component Install (Phase-based)
 
-Execute scan engine per shared spec. Classify and filter for **Tier 3 only**. Apply scoring algorithm. Sort components by score within each phase.
+Execute scan engine per shared spec in **evolve mode**. Classify and filter for continuous improvement components only. Apply scoring algorithm. Sort components by score within each phase.
 
-Display results grouped by Phase (component type) per shared spec Phase Presentation format. Skip empty phases silently (Tier 3 is mostly Skills and Commands — Agents/Rules/MCP phases may be empty).
+Display results grouped by Phase (component type) per shared spec Phase Presentation format. Skip empty phases silently (continuous improvement is mostly Skills and Commands — Agents/Rules/MCP phases may be empty).
 
 Per phase, prompt user with selection syntax from shared spec:
 
@@ -72,7 +72,7 @@ Display new components grouped by Phase, with scores and descriptions. Include n
 ### Step 5: Update Manifest → Generate Report
 
 - Update `ecc.commit_hash` and `ecc.last_sync`
-- Set `tiers.tier3.installed_at` if Tier 3 components were installed
-- Add entries to `installed[]` with score for any newly installed components
-- Add scan entry to `scans[]`
+- Set `phases.continuous.installed_at` if continuous improvement components were installed
+- Add entries to `installed[]` with phase ("continuous") and score for any newly installed components
+- Add scan entry to `scans[]` with `scan_mode: "evolve"`
 - Generate report to `$REPORT_DIR/evolve-YYYY-MM-DD.md`

@@ -108,7 +108,7 @@ Replace placeholders:
 
 - `{{PROJECT_NAME}}` → Q1 answer
 - `{{PROJECT_OVERVIEW}}` → Q2 answer
-- `{{TECH_STACK}}` → `(TBD — /ecc-bootstrap で設定されます)`
+- `{{TECH_STACK}}` → `(TBD — /ecc-configure で自動設定されます)`
 - `{{LANGUAGE}}` → Q4 answer (言語名: "Japanese", "English", etc.)
 
 If `$PROJECT_ROOT/CLAUDE.md` exists AND `$PROJECT_ROOT/CLAUDE.md.pre-ccsdd-bak` does NOT exist:
@@ -161,6 +161,9 @@ Display:
     - ECC: [検出 (<version>) / 未検出]
 
   次のステップ:
-    1. /ecc-bootstrap — 安全方針 + 設計知識のインストール
-    2. /kiro:steering — プロジェクト文脈の収集
+    1. /ecc-bootstrap — 上流工程支援コンポーネントのインストール
+    2. cc-sdd 要件定義（/kiro:steering → /kiro:spec-requirements）
+    3. /ecc-configure — 技術スタック自動抽出 + 実装コンポーネント
+
+    ⚠️ 設計、実装は /ecc-configure 後に開始してください。
 ```

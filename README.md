@@ -65,28 +65,51 @@ cd <your-project>
 claude
 ```
 
-```
-/ecc-init          # プロジェクト初期化 + cc-sdd インストール
-/ecc-bootstrap     # 安全方針 + 設計知識のインストール
-```
-
-### 4. cc-sdd で設計
+### 3.1. プロジェクト初期化 + cc-sdd インストール
 
 ```
-/kiro:steering              # プロジェクト文脈の収集
+/ecc-init
+```
+
+### 3.2. 上流工程支援コンポーネントのインストール
+
+```
+/ecc-bootstrap
+```
+
+Q0（プロジェクトタイプ）のみ質問される。言語・FW・ツールの質問はない。
+Safety + 設計知識 + 品質方法論 + エンジニアリングパラダイム等がインストールされる。
+
+### 4. cc-sdd で要件定義 + steering
+
+```
+/kiro:steering              # プロジェクト文脈・技術スタックの決定
 /kiro:spec-init <feature>   # フィーチャーワークスペース作成
 /kiro:spec-requirements     # 要件定義
-/kiro:spec-design           # アーキテクチャ設計
-/kiro:spec-tasks            # タスク分解
 ```
+
+**重要**: `/kiro:steering` で技術スタック（言語、FW、ツール）を確定してください。
+この情報が `/ecc-configure` で自動抽出されます。
 
 ### 5. 実装コンポーネントのインストール
 
 ```
-/ecc-configure     # 設計確定後、実装系コンポーネントをインストール
+/ecc-configure     # .kiro/steering/tech.md から技術スタックを自動抽出
+                   # 言語固有 rules, FW skills, agents, MCP をインストール
 ```
 
-### 6. 開発 & 継続改善
+### 6. 設計・実装
+
+```
+/kiro:spec-design <feature>     # アーキテクチャ設計
+/kiro:spec-tasks <feature>      # タスク分解
+/kiro:spec-impl <feature> <ids> # 実装
+```
+
+**注意**: 設計（spec-design）は `/ecc-configure` 後に行ってください。
+技術スタックに適した skills と rules がインストールされた状態で設計することで、品質が最大化されます。
+
+### 7. 開発 & 継続改善
 
 ```
 /tdd               # TDD ワークフロー
@@ -96,60 +119,186 @@ claude
 
 ---
 
-## コマンド一覧
-
-| コマンド | 説明 | タイミング |
-|---------|------|-----------|
-| `/ecc-init` | プロジェクト初期セットアップ（cc-sdd install、settings.json、CLAUDE.md 生成） | 最初に1回 |
-| `/ecc-bootstrap` | Tier 0 (安全方針) + Tier 1 (設計知識) インストール | cc-sdd 前 |
-| `/ecc-configure` | Tier 2 (実装コンポーネント) インストール | cc-sdd 設計確定後 |
-| `/ecc-evolve` | Tier 3 (継続改善) + ECC 更新差分の適用 | 開発中随時 |
-| `/ecc-setup` | コマンドルーター / ヘルプ表示 | いつでも |
-
----
-
-## Tier モデル
-
-ECC コンポーネントを4つの Tier に分類し、段階的にインストールする。
-
-| Tier | 名称 | 目的 | タイミング | 代表コンポーネント |
-|------|------|------|-----------|-------------------|
-| 0 | Safety | 破壊的操作の防止 | 最初に | settings.json permissions |
-| 1 | Design Knowledge | 設計フェーズの品質向上 | cc-sdd 前 | architect agent, api-design skill, common rules |
-| 2 | Implementation | 実装フェーズの品質・効率向上 | 設計確定後 | tdd-guide agent, 言語固有 rules, framework skills |
-| 3 | Continuous | 継続的な改善・最適化 | 開発中随時 | continuous-learning skill, /learn command |
-
-### なぜ段階的か
-
-- **Context Window の保護**: 全コンポーネントを一度に入れると 200k → ~70k に縮小する
-- **フェーズの整合性**: 実装ルール（TDD 必須等）が設計フェーズを阻害しない
-- **選定根拠の追跡**: ecc-manifest.yaml で何をなぜ入れたか記録する
-
----
-
 ## ワークフロー全体像
 
 ```
 /ecc-init
   │  cc-sdd install, settings.json, CLAUDE.md 生成
   ▼
-/ecc-bootstrap
-  │  Tier 0 (Safety) + Tier 1 (Design Knowledge)
+/ecc-bootstrap（upstream scan — Q0 のみ）
+  │  Safety + 設計知識 + 品質方法論 + エンジニアリングパラダイム
+  │  ※ 言語/FW の除外なし。upstream_domains キーワードで分類
   ▼
-cc-sdd ─────────────────────────────────────────
-  │  /kiro:steering
-  │  /kiro:spec-init → spec-requirements → spec-design → spec-tasks
-  │  ここで設計が確定
+cc-sdd（要件定義 + steering）────────────────
+  │  /kiro:steering — 技術スタック決定（.kiro/steering/tech.md）
+  │  /kiro:spec-init → spec-requirements
+  │  ここで技術スタックが確定
   ▼
-/ecc-configure
-  │  Tier 2 (Implementation) — 言語固有 rules, agents, commands
+/ecc-configure（downstream scan — 技術スタック自動抽出）
+  │  .kiro/steering/tech.md から自動抽出
+  │  言語固有 rules, framework skills, agents, MCP
   ▼
-TDD 実装 ───────────────────────────────────────
+cc-sdd（設計・実装）─────────────────────────
+  │  spec-design → spec-tasks → spec-impl
+  ▼
+TDD 実装 ───────────────────────────────────
   │  /tdd, /code-review, /build-fix 等
   ▼
 /ecc-evolve（随時）
-     Tier 3 (Continuous) + ECC 更新差分の適用
+     継続改善 + ECC 更新差分の適用
 ```
+
+### 各ステップの詳細
+
+| ステップ | 何が起きるか | 入力 | 出力 |
+|---------|-------------|------|------|
+| `/ecc-init` | プロジェクト初期化、cc-sdd install、設定ファイル生成 | プロジェクト名、概要、パッケージマネージャー | settings.json, CLAUDE.md, .gitignore |
+| `/ecc-bootstrap` | 上流工程支援コンポーネントのスキャン・インストール | Q0（プロジェクトタイプ） | Safety rules, 設計 skills, agents, commands, MCP |
+| cc-sdd steering | プロジェクト文脈・技術スタックの確定 | ユーザー対話 | `.kiro/steering/tech.md` 等 |
+| cc-sdd spec | 要件定義（EARS format） | ユーザー対話 | `.kiro/specs/<feature>/requirements.md` |
+| `/ecc-configure` | 技術スタック自動抽出 + 実装コンポーネントのインストール | `.kiro/steering/tech.md`（自動） | 言語 rules, FW skills, agents, MCP |
+| cc-sdd design | アーキテクチャ設計・タスク分解 | 要件 + インストール済みコンポーネント | `design.md`, `tasks.md` |
+| `/ecc-evolve` | 継続改善コンポーネント + ECC 更新差分 | manifest | 更新された components |
+
+### なぜ `/ecc-configure` の前に spec-design をしないのか
+
+`/ecc-configure` は技術スタックに適した rules, skills, agents をインストールする。これらが存在しない状態で設計（spec-design）を行うと:
+
+- 言語固有のコーディング規約が設計に反映されない
+- フレームワーク固有のパターン（例: Next.js の App Router パターン）が考慮されない
+- テスト戦略（例: Vitest vs Jest）が設計に組み込まれない
+
+設計の質を最大化するために、実装支援コンポーネントは設計フェーズの**前に**インストールする。
+
+---
+
+## コマンド一覧
+
+| コマンド | 説明 | タイミング |
+|---------|------|-----------|
+| `/ecc-init` | プロジェクト初期セットアップ（cc-sdd install、settings.json、CLAUDE.md 生成） | 最初に1回 |
+| `/ecc-bootstrap` | Upstream（安全方針 + 設計知識）インストール — Q0 のみ、cc-sdd 前 | cc-sdd 前 |
+| `/ecc-configure` | Tech Stack 自動抽出 + Downstream（実装コンポーネント）インストール | cc-sdd steering 後 |
+| `/ecc-evolve` | 継続改善コンポーネント + ECC 更新差分の適用 | 開発中随時 |
+| `/ecc-setup` | コマンドルーター / ヘルプ表示 | いつでも |
+
+---
+
+## Phase モデル
+
+ECC コンポーネントを 3 つの Phase に分類し、ワークフロー段階に合わせてインストールする。
+
+| Phase | 名称 | 目的 | タイミング | スキャンモード |
+|-------|------|------|-----------|--------------|
+| Upstream | 上流工程支援 | 要件定義・設計方針の品質向上 | cc-sdd 前 | upstream_domains キーワード |
+| Downstream | 実装支援 | 実装フェーズの品質・効率向上 | cc-sdd steering 後 | 言語/FW/ツール キーワード |
+| Continuous | 継続改善 | パターン抽出・最適化 | 開発中随時 | 継続改善キーワード |
+
+### 代表コンポーネント
+
+| Phase | Skills | Agents | Rules |
+|-------|--------|--------|-------|
+| Upstream | safety-guard, product-lens, architecture-decision-records, tdd-workflow, agentic-engineering, agent-eval, coding-standards, verification-loop | architect, planner, security-reviewer | common/ |
+| Downstream | frontend-patterns, python-patterns, nextjs-turbopack, docker-patterns, e2e-testing | tdd-guide, code-reviewer, typescript-reviewer | typescript/, python/ |
+| Continuous | continuous-learning, rules-distill, context-budget | — | — |
+
+### なぜ段階的か
+
+- **Context Window の保護**: 全コンポーネントを一度に入れると 200k → ~70k に縮小する
+- **フェーズの整合性**: 実装ルール（言語固有 linting 等）が要件定義フェーズを阻害しない
+- **選定精度の向上**: 技術スタック確定後にスコアリングすることで、不要なコンポーネントの除外精度が上がる
+- **選定根拠の追跡**: ecc-manifest.yaml で何をなぜ入れたか記録する
+
+---
+
+## upstream_domains 詳細
+
+bootstrap mode でコンポーネントを分類する 7 つのドメイン:
+
+### safety（自動インストール）
+
+**目的**: 全工程で破壊的操作を防止する基盤。
+
+- **Keywords**: destructive operation prevention, permission guard, safety policy
+- **代表**: `safety-guard` skill, settings.json permission template
+- **理由**: プロジェクト開始時点から保護が必要。後からインストールしても、それまでの操作は保護されない。
+
+### design_methodology
+
+**目的**: 要件定義・アーキテクチャ設計の判断基準を提供する。
+
+- **Keywords**: architecture, system design, ADR, decision record, product thinking, requirements, MVP, blueprint, modularity, scalability, layering, API design, REST, resource naming, schema design, database patterns, indexing, frontend design, component composition, state management, design system, backend design, service layer, repository pattern, dependency injection, caching strategies, N+1 prevention, performance optimization
+- **代表**: `architecture-decision-records`, `product-lens`, `api-design`, `frontend-patterns`, `backend-patterns`, `postgres-patterns`
+- **理由**: 設計パターンの知識がないと、cc-sdd の spec-design で浅い設計になる。「どのパターンを使うべきか」の判断基準が Claude に提供される。
+
+### quality_methodology
+
+**目的**: 設計段階で品質方針（テスト戦略、コードレビュー基準）を決定する。
+
+- **Keywords**: TDD, test-driven, test strategy, verification, code review, quality gate, coding standards
+- **代表**: `tdd-workflow`, `coding-standards`, `verification-loop`
+- **理由**: TDD の方法論を理解していると、テスト可能なインターフェース設計が自然に生まれる。品質方針は設計に組み込むべきであり、実装後に追加するものではない。
+
+### engineering_paradigm
+
+**目的**: エージェント活用等のパラダイムはアーキテクチャ判断に直接影響する。
+
+- **Keywords**: agentic engineering, eval-first, agent architecture, multi-agent, cost-aware, decomposition, harness, agent eval
+- **代表**: `agentic-engineering`, `agent-eval`, `agent-harness-construction`
+- **理由**: LangGraph 等のエージェントフレームワークを使用する場合、エージェント設計パターン（eval-first, decomposition）を要件定義段階で理解しておく必要がある。これらはアーキテクチャの根幹に関わる。
+
+### security_design
+
+**目的**: セキュリティ設計方針は要件定義段階で決定が必要。
+
+- **Keywords**: security design, OWASP, authentication architecture, secrets management, authorization
+- **代表**: `security-review` skill, `security-reviewer` agent
+- **理由**: 認証・認可のアーキテクチャは後付けが極めて困難。要件定義段階でセキュリティ要件を明確にし、設計に反映する。
+
+### workflow_foundation
+
+**目的**: 開発ワークフローの基盤は最初に確立する。
+
+- **Keywords**: git workflow, research-first, plan-first, coding style, immutability, continuous learning
+- **代表**: `git-workflow` skill, common rules (coding-style, development-workflow)
+- **理由**: コミット規約、ブランチ戦略、コーディングスタイル（イミュータビリティ）は全工程に影響する。
+
+### common_rules（自動インストール）
+
+**目的**: 共通ルールは全工程に適用される。
+
+- **対象**: `rules/common/` ディレクトリ全体
+- **代表**: coding-style.md, testing.md, security.md, git-workflow.md, development-workflow.md 等
+- **理由**: 言語/FW に依存しない基盤ルール。
+
+---
+
+## Tech Stack 自動抽出
+
+`/ecc-configure` は以下の優先順位で技術スタックを自動検出する。
+
+### Priority 1: `.kiro/steering/tech.md`（推奨）
+
+cc-sdd の `/kiro:steering` コマンドが生成する技術スタック定義ファイル。以下のセクションをパースする:
+
+- **Language** / **言語** → `tech_stack.languages`
+- **Framework** / **フレームワーク** → `tech_stack.frameworks`
+- **Key Libraries** → `tech_stack.frameworks`（追加）
+- **Required Tools** / **ツール** → `tech_stack.tools`
+
+**なぜ steering が推奨か**: cc-sdd の要件定義プロセスを経て確定した技術スタックであるため、最も信頼性が高い。
+
+### Priority 2: `CLAUDE.md` の Tech Stack 行
+
+`**Tech Stack:**` 行をパースし、カンマ/パイプ区切りで技術名を抽出。ECC の Classification Keywords に照合して languages/frameworks/tools に分類する。
+
+**ユースケース**: cc-sdd を使用しないプロジェクト、または steering を省略した場合。
+
+### Priority 3: 手動入力（Q1-Q3）
+
+Priority 1, 2 が利用できない場合、ユーザーに直接質問する。ECC のディレクトリ構造から選択肢を動的に構築する。
+
+**ユースケース**: 新規プロジェクトで CLAUDE.md もまだ整備されていない場合。
 
 ---
 
@@ -187,9 +336,9 @@ my-ecc/
 │   ├── settings.json              # my-ecc 開発用 permissions
 │   └── commands/
 │       ├── ecc-init.md            # プロジェクト初期化コマンド
-│       ├── ecc-bootstrap.md       # Tier 0+1 インストーラー
-│       ├── ecc-configure.md       # Tier 2 インストーラー
-│       ├── ecc-evolve.md          # Tier 3 + 更新同期
+│       ├── ecc-bootstrap.md       # Upstream インストーラー
+│       ├── ecc-configure.md       # Tech Stack 抽出 + Downstream インストーラー
+│       ├── ecc-evolve.md          # 継続改善 + 更新同期
 │       └── ecc-setup.md           # ルーター / ヘルプ
 ├── docs/
 │   ├── ecc-shared-spec.md         # 共有ランタイム仕様（遅延読み込み）
@@ -207,9 +356,19 @@ my-ecc/
 
 ## 設計思想
 
+### Phase-Aware Classification
+
+コンポーネントをワークフロー段階（upstream / downstream / continuous）に基づいて分類する。
+
+bootstrap は「上流工程に必要か？」で判定し、configure は「確定した tech stack に対して有用か？」で判定する。これにより、`tdd-workflow` や `agentic-engineering` のような方法論コンポーネントが、技術スタック未確定の段階でも正しく推奨される。
+
 ### 基準ベース抽出
 
-コンポーネント名をハードコードせず、description キーワードで知識ドメイン（Architecture, API Design, Security 等）に分類する。ECC がリネーム・統合・分割しても分類基準は壊れない。
+コンポーネント名をハードコードせず、description キーワードで知識ドメインに分類する。ECC がリネーム・統合・分割しても分類基準は壊れない。
+
+### Tech Stack 自動抽出
+
+cc-sdd steering の成果物（`.kiro/steering/tech.md`）から技術スタックを自動抽出する。手動入力の手間を省き、cc-sdd との整合性を保つ。
 
 ### 遅延読み込み
 

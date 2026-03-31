@@ -1,12 +1,12 @@
 ---
-description: "Install Tier 0 (safety) + Tier 1 (design knowledge) ECC components. Run BEFORE cc-sdd."
+description: "Install upstream (safety + design knowledge) ECC components. Run BEFORE cc-sdd."
 ---
 
-# ECC Bootstrap — Tier 0 + Tier 1 Installer
+# ECC Bootstrap — Upstream Component Installer
 
 ## Prerequisites
 
-Read `docs/ecc-shared-spec.md` for: path resolution, ECC detection, scan engine, classification criteria, classification keywords, scoring algorithm, project type, phase presentation, manifest schema, and operational notes. Follow that spec exactly for all shared operations.
+Read `docs/ecc-shared-spec.md` for: path resolution, ECC detection, scan engine, classification criteria (bootstrap mode), upstream_domains, scoring algorithm (bootstrap mode), project type, phase presentation, manifest schema, and operational notes. Follow that spec exactly for all shared operations.
 
 ## Output Language
 
@@ -20,29 +20,15 @@ Resolve paths per shared spec. If ECC not found, display the error message from 
 
 ### Step 2: Manifest Check
 
-Read `$MANIFEST_PATH`. If it exists and bootstrap has already been completed (`tiers.tier0.installed_at` or `tiers.tier1.installed_at` is set), ask the user to confirm re-execution:
+Read `$MANIFEST_PATH`. If it exists and bootstrap has already been completed (`phases.upstream.installed_at` is set), ask the user to confirm re-execution:
 
 「bootstrap は既に実行済みです。再実行しますか？」
 
 ### Step 3: Initial Setup (only if manifest does not exist)
 
-#### 3a: Discover Options via ECC Scan
+#### 3a: Ask User
 
-Scan ECC to dynamically build available options:
-
-- `$ECC_ROOT/rules/` subdirectory names → available **languages** list
-  - Example: `common/`, `typescript/`, `python/` → TypeScript, Python
-- `$ECC_ROOT/skills/*/SKILL.md` descriptions → available **frameworks/libraries** list
-  - Extract framework names from descriptions (Next.js, Django, Flask, Docker, etc.)
-- `$ECC_ROOT/.agents/skills/*/agents/openai.yaml` → supplement with display_name, short_description
-- `$ECC_ROOT/agents/*.md` names → language-specific **agents** list
-- `$ECC_ROOT/mcp-configs/mcp-servers.json` keys → available **MCP servers** list
-  - Extract server name + description from each JSON entry
-  - Flag servers with `env` field as "API Key required"
-
-#### 3b: Ask User
-
-Use AskUserQuestion for each:
+Use AskUserQuestion:
 
 **Q0: Project Type** (single-select)
 
@@ -50,81 +36,71 @@ Use AskUserQuestion for each:
 
 1. Frontend（SPA / SSR / Static サイト）
 2. Backend（API / CLI / Worker）
-3. Fullstack（Frontend + Backend）
+3. Fullstack（Frontend + Backend + Infrastructure + DevOps）
 4. Library / Package（ライブラリ / パッケージ）
 5. Infrastructure / DevOps
 6. Data / ML Pipeline
 
-**Q1: Languages** (multi-select from scan results)
+#### 3b: Initialize Manifest
 
-「使用する言語を選択してください（カンマ区切りで入力）:」followed by the discovered language list.
-
-**Q2: Frameworks/Libraries** (multi-select, filtered by Q1 + language-agnostic options)
-
-「使用するフレームワーク/ライブラリを選択してください（カンマ区切りで入力）:」followed by relevant options based on Q1 answers.
-
-**Q3: Tools/Infrastructure** (multi-select, filtered by project type)
-
-「使用するツール/インフラを選択してください（カンマ区切りで入力）:」followed by relevant options (docker, postgres, playwright, supabase, etc.) with project type recommendations highlighted.
-
-#### 3c: Initialize Manifest
-
-Create `$MANIFEST_PATH` with the manifest schema from shared spec. Save user answers:
+Create `$MANIFEST_PATH` with the manifest schema from shared spec (version 2). Save:
 
 - Q0 → `project.type`
-- Q1 → `project.tech_stack.languages`
-- Q2 → `project.tech_stack.frameworks`
-- Q3 → `project.tech_stack.tools`
+- `project.tech_stack.languages: []` (empty — set during configure)
+- `project.tech_stack.frameworks: []` (empty — set during configure)
+- `project.tech_stack.tools: []` (empty — set during configure)
+- `project.tech_stack_source: null` (set during configure)
 
-#### 3d: Update CLAUDE.md Tech Stack
+#### 3c: Update CLAUDE.md Tech Stack
 
-If `$PROJECT_ROOT/CLAUDE.md` exists and contains "(TBD — /ecc-bootstrap で設定されます)":
+If `$PROJECT_ROOT/CLAUDE.md` exists and contains "(TBD" placeholder:
 
-Replace with actual tech stack composed from Q1 (languages) + Q2 (frameworks) + Q3 (tools).
+Replace with `(TBD — /ecc-configure で自動設定されます)`
 
-### Step 4: Run Scan Engine
+### Step 4: Run Scan Engine (Bootstrap Mode)
 
-Execute scan engine per shared spec. Classify all components into tiers. Filter results for **Tier 0 and Tier 1 only**. Apply scoring algorithm per shared spec. Sort components by score within each phase.
+Execute scan engine per shared spec. Classify all components using **bootstrap mode**:
+
+1. Match each component's `description` and body content against **upstream_domains** keywords
+2. Apply **bootstrap mode scoring** per shared spec
+3. **Do NOT apply language/FW -100 exclusion** — tech stack is not yet determined
+4. Sort components by score within each phase
 
 ### Step 5: Present Recommendations (Phase-based)
 
-Display scored components grouped by Tier, then by Phase (component type) per shared spec Phase Presentation format.
+Display scored components grouped first by auto-install status, then by Phase (component type):
 
 ```markdown
-## Tier 0: Safety
+## 🔒 自動インストール（Safety + Common Rules）
 
-### Phase A: Skills
-| # | Component | Score | 説明 | 根拠 |
+以下のコンポーネントは自動的にインストールされます:
+
+| # | Component | Type | Domain | 説明 |
 | --- | --- | --- | --- | --- |
+| 1 | safety-guard | skill | safety | (description) |
+| 2 | common/ | rules | common_rules | 共通コーディング規約 (10 files) |
 
-### Phase C: Rules
-| # | Component | Score | 説明 | 根拠 |
-| --- | --- | --- | --- | --- |
+## Upstream Components
 
-## Tier 1: Design Knowledge
-
-### Phase A: Skills — 設計知識・パターン
+### Phase A: Skills — 上流工程支援
 
 #### ⭐⭐⭐ 強く推薦
-| # | Component | 説明 | 根拠 |
-| --- | --- | --- | --- |
-| 1 | (name) | (description) | (match reason) |
+| # | Component | Domain | 説明 | 根拠 |
+| --- | --- | --- | --- | --- |
+| 1 | (name) | (domain) | (description) | (match reason) |
 
 #### ⭐⭐ 推薦
-| # | Component | 説明 | 根拠 |
-| --- | --- | --- | --- |
+| # | Component | Domain | 説明 | 根拠 |
+| --- | --- | --- | --- | --- |
 
 #### ⭐ 任意
 ...
 
-#### 📦 ドメイン特化（確認が必要）
-...
-
 ### Phase B: Agents — 専門レビュアー・ビルダー
-(same format per phase)
+(same format per phase, with Domain column)
 
 ### Phase C: Rules — コーディング規約
-(Rules are auto-determined by language. common/ is always installed.)
+(common/ is auto-installed above. Other rule directories shown here if they match upstream_domains.)
 
 ### Phase D: Commands — ワークフロー
 (same format per phase)
@@ -147,7 +123,7 @@ Skip empty phases silently.
 
 ### Step 6: Install
 
-Copy approved components to destinations per shared spec. Create directories with `mkdir -p` as needed.
+Copy approved components (including auto-install components) to destinations per shared spec. Create directories with `mkdir -p` as needed.
 
 MCP components: Read existing `$PROJECT_CLAUDE/settings.json`, add approved servers under `mcpServers` key, write back formatted JSON. Never overwrite other settings.
 
@@ -158,14 +134,35 @@ For MCP servers with `env` field, display:
 
 ### Step 7: Update Manifest
 
-Record each installed component with: type, name, source, destination, tier, domain, score, reason, installed_at (ISO 8601). Set `tiers.tier0.installed_at` and `tiers.tier1.installed_at`. Record `ecc.commit_hash` and `ecc.last_sync`. Add scan entry to `scans[]`.
+Record each installed component with: type, name, source, destination, phase ("upstream"), domain, score, reason, installed_at (ISO 8601). Set `phases.upstream.installed_at`. Record `ecc.commit_hash` and `ecc.last_sync`. Add scan entry to `scans[]` with `scan_mode: "bootstrap"`.
 
 ### Step 8: Generate Report
 
 Output to `$REPORT_DIR/bootstrap-YYYY-MM-DD.md`:
 
-1. **Scan Summary** — Total scanned, counts per tier
-2. **Phase-based Results** — Phase A-E ごとのインストール結果
-3. **Coverage Analysis** — Coverage per knowledge domain
-4. **Gaps** — Uncovered domains and recommendations
-5. **Next Steps** — Instructions to start cc-sdd
+1. **Scan Summary** — Total scanned, upstream domain match counts
+2. **Phase-based Results** — Phase A-E ごとのインストール結果（Domain 列付き）
+3. **Coverage Analysis** — Coverage per upstream_domain
+4. **Gaps** — Uncovered upstream domains and recommendations
+5. **Next Steps** — 以下の内容を出力:
+
+```markdown
+## Next Steps
+
+1. **cc-sdd: 要件定義 + steering を実施**
+   - `/kiro:steering` — プロジェクト文脈・技術スタックの決定
+   - `/kiro:spec-init <feature>` → `/kiro:spec-requirements <feature>`
+
+   ⚠️ `/kiro:steering` で以下を確定してください:
+   - 使用言語 (TypeScript, Python 等)
+   - フレームワーク (Next.js, NestJS, LangGraph 等)
+   - インフラ/ツール (AWS, Docker, Playwright 等)
+
+2. **`/ecc-configure`** を実行
+   → `.kiro/steering/tech.md` から技術スタックを自動抽出し、
+     実装に必要な rules, skills, agents, commands, MCP をインストールします。
+
+⚠️ 設計（spec-design）、実装（spec-impl）は `/ecc-configure` 後に開始してください。
+   ecc-configure が技術スタックに適したコンポーネントをインストールし、
+   設計・実装の品質を最大化します。
+```
